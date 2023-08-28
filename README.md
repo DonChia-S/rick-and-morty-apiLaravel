@@ -36,6 +36,8 @@
 - y si desea realizar la migracion de los datos, ejecutar estos dos endpoints:
 - {GET} http://localhost:7500/api/migrate/episode
 - {GET} http://localhost:7500/api/migrate/location
+# NOTA 
+- ya la aplicación cuenta con datos en sus tablas y solo es proceder a la instalación.
 
 
  
