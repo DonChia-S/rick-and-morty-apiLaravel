@@ -9,28 +9,34 @@ use Illuminate\Support\Facades\DB;
 class ApiController extends Controller
 {
     public function index(Request $request){
-        $pagination = DB::table($request->entity)->paginate(20);
 
-        $results = array();
+        if($this->validateToken($request)){
 
-        foreach($pagination->items() as $data){
-            foreach($data as $key => $value)
-            {
-                $data->{$key} = $this->isJson($value);
+            $pagination = DB::table($request->entity)->paginate(20);
+
+            $results = array();
+
+            foreach($pagination->items() as $data){
+                foreach($data as $key => $value)
+                {
+                    $data->{$key} = $this->isJson($value);
+                }
+
+                array_push($results, $data);
             }
 
-            array_push($results, $data);
+            $reponse = [
+                "info" => [
+                    "count" => $pagination->total(),
+                    "pages" => $pagination->lastPage()
+                ],
+                "results" => $results
+            ];
+
+            return $reponse;
         }
 
-        $reponse = [
-            "info" => [
-                "count" => $pagination->total(),
-                "pages" => $pagination->lastPage()
-            ],
-            "results" => $results
-        ];
-
-        return $reponse;
+        return ["message" => "Error token"];
     }
 
     public function show(Request $request){
@@ -46,44 +52,55 @@ class ApiController extends Controller
     }
 
     public function store(Request $request){
-        $id = $request->query("id");
+        if($this->validateToken($request)){
+            $id = $request->query("id");
 
-        $newRegister = DB::table($request->entity)->insert($request->all());
+            $newRegister = DB::table($request->entity)->insert($request->all());
 
-        return json_encode([
-            "message" => "successful register",
-            "data" => $request->all()
-        ]);
-    }
-
-    public function update(Request $request){
-        $id = $request->query("id");
-        $editRegister = DB::table($request->entity)
-        ->where('id', $id)
-        ->update($request->all());
-
-
-        return json_encode([
-            "message" => "successful register was edited",
-            "data" => $editRegister
-        ]);
-    }
-
-    public function destroy(Request $request){
-        $id = $request->query("id");
-        $register = DB::table($request->entity)->where('id', $id);
-
-        if($register->first()->id == $id){
-            $register->delete();
             return json_encode([
-                "message" => "Personaje Eliminado correctamente"
+                "message" => "successful register",
+                "data" => $request->all()
             ]);
         }
 
-        return json_encode([
-            "message" => "Personaje no encontrado"
-        ]);
+        return ["message" => "Error token"];
+    }
 
+    public function update(Request $request){
+        if($this->validateToken($request)){
+            $id = $request->query("id");
+            $editRegister = DB::table($request->entity)
+            ->where('id', $id)
+            ->update($request->all());
+
+
+            return json_encode([
+                "message" => "successful register was edited",
+                "data" => $editRegister
+            ]);
+        }
+
+        return ["message" => "Error token"];
+    }
+
+    public function destroy(Request $request){
+        if($this->validateToken($request)){
+            $id = $request->query("id");
+            $register = DB::table($request->entity)->where('id', $id);
+
+            if($register->first()->id == $id){
+                $register->delete();
+                return json_encode([
+                    "message" => "Personaje Eliminado correctamente"
+                ]);
+            }
+
+            return json_encode([
+                "message" => "Personaje no encontrado"
+            ]);
+        }
+
+        return ["message" => "Error token"];
     }
 
     public function migrate(Request $request){
@@ -98,7 +115,7 @@ class ApiController extends Controller
 
                 foreach($results as $data){
                     foreach($data as $key => $value){
-                       $data->{$key} = gettype($value) == "array" ? json_encode($value) : $value;
+                        $data->{$key} = gettype($value) == "array" || gettype($value) == "object" ? json_encode($value) : $value;
                     }
                     DB::table($request->word)->insert((array) $data);
                 }
@@ -135,5 +152,11 @@ class ApiController extends Controller
         curl_close($ch);
 
         return json_decode($data);
+    }
+
+    private function validateToken(Request $request){
+        $header = $request->header('token');
+
+        return $header == "#TOKEN12345==";
     }
 }
